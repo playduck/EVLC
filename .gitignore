@@ -1,0 +1,8 @@
+# Enviornment
+.vscode/
+.DS_Store
+
+# Build Outpu and files
+build/
+sdkconfig
+sdkconfig.old
