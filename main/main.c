@@ -176,6 +176,11 @@ void set(homekit_characteristic_t* ctx, homekit_value_t value)  {
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+/* .getter_ex and .settere_ex expect const function pointer
+    function however is not modified at runtime */
+
 homekit_characteristic_t target_position = {
     HOMEKIT_DECLARE_CHARACTERISTIC_TARGET_POSITION(0, .getter_ex = get, .setter_ex = set)
 };
@@ -186,7 +191,12 @@ homekit_characteristic_t position_state = {
     HOMEKIT_DECLARE_CHARACTERISTIC_POSITION_STATE(POSITION_STATE_STOPPED, .getter_ex = get, .setter_ex = set)
 };
 
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverride-init"
 homekit_accessory_t *accessories[] = {
+    /* .category is assigned <homekit_accessory_category_other> by default and can safely be overwritten */
     HOMEKIT_ACCESSORY(.id = 1, .category = homekit_accessory_category_speaker, .services = (homekit_service_t *[]){
         HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics = (homekit_characteristic_t *[]){
             HOMEKIT_CHARACTERISTIC(NAME, CONFIG_DEVICE_NAME),
@@ -208,6 +218,7 @@ homekit_accessory_t *accessories[] = {
     }),
     NULL
 };
+#pragma GCC diagnostic pop
 
 homekit_server_config_t config = {
     .accessories = accessories,
