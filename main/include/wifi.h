@@ -1,3 +1,5 @@
+/* wifi.h by robin prillwitz 2020 */
+
 #ifndef WIFI_H
 #define WIFI_H
 #pragma once

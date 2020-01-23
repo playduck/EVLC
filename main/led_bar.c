@@ -1,4 +1,5 @@
-// #include "definitions.h"
+/* led_bar.c by robin prillwitz 2020 */
+
 #include "led_bar.h"
 
 uint16_t buffer[8];

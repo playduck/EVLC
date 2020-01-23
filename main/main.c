@@ -1,5 +1,6 @@
-#include "definitions.h"
+/* main.c by robin prillwitz 2020 */
 
+#include "definitions.h"
 
 /* --------------------------------- Headers -------------------------------- */
 
@@ -198,7 +199,6 @@ homekit_accessory_t *accessories[] = {
         }),
         HOMEKIT_SERVICE(DOOR, .primary = true, .characteristics = (homekit_characteristic_t *[]){
             HOMEKIT_CHARACTERISTIC(NAME, CONFIG_DEVICE_NAME),
-            // HOMEKIT_CHARACTERISTIC(TARGET_POSITION, 0, .getter_ex = get, .setter_ex = set),
             &target_position,
             &current_position,
             &position_state,

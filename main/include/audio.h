@@ -1,3 +1,5 @@
+/* audio.h by robin prillwitz 2020 */
+
 #ifndef AUDIO_H
 #define AUDIO_H
 #pragma once

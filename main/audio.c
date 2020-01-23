@@ -1,4 +1,5 @@
-// #include "definitions.h"
+/* audio.c by robin prillwitz 2020 */
+
 #include "audio.h"
 
 void set_attenuator_a(uint8_t vol, bool mute)   {

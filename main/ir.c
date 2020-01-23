@@ -1,4 +1,5 @@
-// #include "definitions.h"
+/* ir.c by robin prillwitz 2020 */
+
 #include "ir.h"
 
 static rmt_channel_t rx_channel = RMT_CHANNEL_1;
@@ -56,7 +57,7 @@ int8_t quantize(int8_t val)   {
 
 void decode_ir(uint32_t *cmd, bool repeat)    {
     switch(*cmd) {
-        case 0x0010:    // vol up
+        case KEY_VOL_UP:
             if(repeat == false)    {
                 target = quantize(target+5);
             }   else    {
@@ -65,7 +66,7 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
             muted = false;
             ESP_LOGI(TAG_i, "Vol up (%d)", target);
             break;
-        case 0x0011:    // vol down
+        case KEY_VOL_DOWN:
             if(repeat == false)    {
                 target = quantize(target-5);
             }   else    {
@@ -74,7 +75,7 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
             muted = false;
             ESP_LOGI(TAG_i, "Vol down (%d)", target);
             break;
-        case 0x000d:    // mute
+        case KEY_MUTE:
             if(repeat == false) {
                 ESP_LOGI(TAG_i, "Mute");
                 if(muted)   {
@@ -86,18 +87,17 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
                 muted = !muted;
             }
             break;
-        case 0x0037:    // red
+        case KEY_RED:
             ESP_LOGW("DEBUG", "Restarting!\n");
             esp_restart();
-            // longjmp(buf, 0);
             return;
-        case 0x0036:    // green
+        case KEY_GREEN:
             ESP_LOGW("DEBUG", "Forcing shutdown task");
             current = target;
             display_off = false;
             shutdown_timer = 15;
             return;
-        case 0x0032:    // yellow
+        case KEY_YELLOW:
             ESP_LOGW("DEBUG", "Intro Animation");
             if(display_off) {
                 fade_in_l();
@@ -107,7 +107,7 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
             vTaskDelay(600 / portTICK_PERIOD_MS);
             purge_buffer_l();
             break;
-        case 0x0034:    // blue
+        case KEY_BLUE:
             ; // empty statement, 'cause C
             char pcWriteBuffer[1024] = "";
             vTaskGetRunTimeStats(( char *)pcWriteBuffer);

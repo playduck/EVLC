@@ -1,3 +1,5 @@
+/* led_bar.h by robin prillwitz 2020 */
+
 #ifndef LED_BAR_H
 #define LED_BAR_H
 #pragma once

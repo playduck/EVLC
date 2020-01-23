@@ -1,3 +1,5 @@
+/* definitions.h by robin prillwitz 2020 */
+
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 #pragma once

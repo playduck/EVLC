@@ -1,3 +1,5 @@
+/* wifi.c by robin prillwitz 2020 */
+
 #include "wifi.h"
 
 static EventGroupHandle_t s_wifi_event_group;
