@@ -64,7 +64,7 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
                 target = quantize(target+10);
             }
             muted = false;
-            ESP_LOGI(TAG_i, "Vol up (%d)", target);
+            // ESP_LOGI(TAG_i, "Vol up (%d)", target);
             break;
         case KEY_VOL_DOWN:
             if(repeat == false)    {
@@ -73,11 +73,11 @@ void decode_ir(uint32_t *cmd, bool repeat)    {
                 target = quantize(target-10);
             }
             muted = false;
-            ESP_LOGI(TAG_i, "Vol down (%d)", target);
+            // ESP_LOGI(TAG_i, "Vol down (%d)", target);
             break;
         case KEY_MUTE:
             if(repeat == false) {
-                ESP_LOGI(TAG_i, "Mute");
+                // ESP_LOGI(TAG_i, "Mute");
                 if(muted)   {
                     target = pre_mute;
                 }   else    {

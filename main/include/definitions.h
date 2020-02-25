@@ -26,10 +26,6 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
-#define POSITION_STATE_CLOSING 0
-#define POSITION_STATE_OPENING 1
-#define POSITION_STATE_STOPPED 2
-
 #define WRITE_BIT I2C_MASTER_WRITE
 
 #define ABS(a) (a < 0 ? -a : a)
@@ -55,9 +51,9 @@ TaskHandle_t updateTask;
 uint8_t shutdown_timer;
 bool display_off;
 
-uint8_t current;
 uint8_t state;
-uint8_t target;
+volatile uint8_t current;
+volatile uint8_t target;
 
 uint8_t pre_mute;
 bool muted;

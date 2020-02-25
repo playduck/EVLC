@@ -6,7 +6,7 @@ uint16_t buffer[8];
 
 // sets led brightness (0-15)
 void set_brightness_l(uint8_t brightness)   {
-    ESP_LOGI(TAG_l, "Setting Brightness to %0X (%0d)", brightness, brightness);
+    // ESP_LOGI(TAG_l, "Setting Brightness to %0X (%0d)", brightness, brightness);
     uint8_t br_command = DIM_l | (brightness & 0x0F);
     ESP_ERROR_CHECK_WITHOUT_ABORT(write_i2c(ADDR_l, &br_command, sizeof(br_command)));
 }
@@ -139,17 +139,17 @@ void initilize_l(void (*cb)())  {
 
     purge_buffer_l();
 
-    set_brightness_l(0);
-    set_display_l(true, 0x02);
+    set_brightness_l(15);
+    // set_display_l(true, 0x02);
 
-    set_bar_l(24, red, red, true);
+    // set_bar_l(24, red, red, true);
 
-    fade_in_l();
+    // fade_in_l();
 
     set_display_l(true, 0x00);
 
-    intro_animation_l();
-    purge_buffer_l();
+    // intro_animation_l();
+    // purge_buffer_l();
 
     (*cb)();
 }

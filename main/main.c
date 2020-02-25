@@ -20,9 +20,30 @@ void app_main(void);
 
 /* -------------------------------- Variables ------------------------------- */
 
-homekit_characteristic_t target_position;
-homekit_characteristic_t current_position;
-homekit_characteristic_t position_state;
+// homekit_characteristic_t target_position;
+// homekit_characteristic_t current_position;
+// homekit_characteristic_t position_state;
+
+const uint8_t POSITION_STATE_CLOSING = 0;
+const uint8_t POSITION_STATE_OPENING = 1;
+const uint8_t POSITION_STATE_STOPPED = 2;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+/* .getter_ex and .settere_ex expect const function pointer
+    function however is not modified at runtime */
+
+homekit_characteristic_t target_position = {
+    HOMEKIT_DECLARE_CHARACTERISTIC_TARGET_POSITION(0, .getter_ex = get, .setter_ex = set)
+};
+homekit_characteristic_t current_position = {
+    HOMEKIT_DECLARE_CHARACTERISTIC_CURRENT_POSITION(0, .getter_ex = get, .setter_ex = set)
+};
+homekit_characteristic_t position_state = {
+    HOMEKIT_DECLARE_CHARACTERISTIC_POSITION_STATE(POSITION_STATE_STOPPED, .getter_ex = get, .setter_ex = set)
+};
+
+#pragma GCC diagnostic pop
 
 /* ----------------------------------- I2C ---------------------------------- */
 
@@ -50,7 +71,7 @@ esp_err_t write_i2c(uint8_t addr, uint8_t *data_wr, size_t size)    {
     i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
     i2c_master_stop(cmd);
 
-    esp_err_t ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
+	esp_err_t ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
 
     i2c_cmd_link_delete(cmd);
     return ret;
@@ -93,9 +114,12 @@ void update_state(void*_args)  {
             // if(current == 0)    {
             //     muted = true;
             // }
-            homekit_characteristic_notify(&position_state, HOMEKIT_UINT8(POSITION_STATE_STOPPED));
             ESP_LOGI(TAG_a, "Attenuation at -%ddB",
-                (uint8_t) MAX(0, MIN(79, roundf(79.0F - 39.6F * log10f(current) ) ) ) );
+                (uint8_t) MAX(0, MIN(79, roundf(79.0F - 39.5F * log10f(current) ) ) ) );
+
+            // homekit_characteristic_notify(&position_state, HOMEKIT_UINT8(POSITION_STATE_STOPPED));
+            homekit_characteristic_notify(&current_position, HOMEKIT_UINT8(current));
+            // homekit_characteristic_notify(&target_position, HOMEKIT_UINT8(target));
             vTaskSuspend(updateTask);
         }
 
@@ -108,8 +132,6 @@ void update_supervisor_task(void*_args) {
         shutdown_timer = 0;
         for(; shutdown_timer <= 15; shutdown_timer++) {
             vTaskDelay(1000 / portTICK_PERIOD_MS);
-            homekit_characteristic_notify(&current_position, HOMEKIT_UINT8(current));
-            homekit_characteristic_notify(&target_position, HOMEKIT_UINT8(target));
             // ESP_LOGI("TIMER", "%d", shutdown_timer);
         }
 
@@ -137,12 +159,13 @@ void identify(homekit_value_t _value)   {
 homekit_value_t get(homekit_characteristic_t* ctx)  {
     ESP_LOGI("HK", "Get");
        if(ctx->type == HOMEKIT_CHARACTERISTIC_CURRENT_POSITION) {
-                return HOMEKIT_UINT8(current);
-       } else if(ctx->type == HOMEKIT_CHARACTERISTIC_TARGET_POSITION)    {
-                return HOMEKIT_UINT8(target);
+            return HOMEKIT_UINT8(current);
+        } else if(ctx->type == HOMEKIT_CHARACTERISTIC_TARGET_POSITION)    {
+            return HOMEKIT_UINT8(target);
        } else if(ctx->type == HOMEKIT_CHARACTERISTIC_POSITION_STATE)    {
-                return HOMEKIT_UINT8(state);
+            return HOMEKIT_UINT8(state);
         }
+    ESP_LOGE("HK", "Cannot find Characteristic %s -> Returning NULL", ctx->type);
     return HOMEKIT_NULL(NULL);
 }
 
@@ -162,8 +185,8 @@ void set(homekit_characteristic_t* ctx, homekit_value_t value)  {
                 homekit_characteristic_notify(&position_state, HOMEKIT_UINT8(POSITION_STATE_OPENING));
             }
         } else if(ctx->type == HOMEKIT_CHARACTERISTIC_POSITION_STATE)    {
-            state = value.uint8_value;
-            ESP_LOGI("HK", "Set State: %d", state);
+            // state = value.uint8_value;
+            ESP_LOGE("HK", "(tried to) set State (?): %d to %d", state, value.uint8_value);
         }
 
         shutdown_timer = 0;
@@ -175,23 +198,6 @@ void set(homekit_characteristic_t* ctx, homekit_value_t value)  {
         }
     }
 }
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-/* .getter_ex and .settere_ex expect const function pointer
-    function however is not modified at runtime */
-
-homekit_characteristic_t target_position = {
-    HOMEKIT_DECLARE_CHARACTERISTIC_TARGET_POSITION(0, .getter_ex = get, .setter_ex = set)
-};
-homekit_characteristic_t current_position = {
-    HOMEKIT_DECLARE_CHARACTERISTIC_CURRENT_POSITION(0, .getter_ex = get, .setter_ex = set)
-};
-homekit_characteristic_t position_state = {
-    HOMEKIT_DECLARE_CHARACTERISTIC_POSITION_STATE(POSITION_STATE_STOPPED, .getter_ex = get, .setter_ex = set)
-};
-
-#pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
@@ -229,7 +235,7 @@ homekit_server_config_t config = {
 /* ----------------------------------- NVS ---------------------------------- */
 
 nvs_handle_t nvs_user_open()    {
-    ESP_LOGI("NVS", "Opening NVS");
+    ESP_LOGD("NVS", "Opening NVS");
 
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
@@ -243,24 +249,26 @@ nvs_handle_t nvs_user_open()    {
 }
 
 void nvs_read(void*_args)   {
+    uint8_t value = 0;
     nvs_handle_t nvs_handle = nvs_user_open();
     if(nvs_handle != (nvs_handle_t)NULL)  {
-        ESP_LOGI("NVS", "Reading from NVS");
+        ESP_LOGD("NVS", "Reading from NVS");
 
-        esp_err_t err = nvs_get_u8(nvs_handle, "target", &target);
+        esp_err_t err = nvs_get_u8(nvs_handle, "target", &value);
 
         switch (err) {
             case ESP_OK:
-                ESP_LOGI("NVS", "Sucessfully loaded target Value");
+                ESP_LOGD("NVS", "Sucessfully loaded target Value");
                 break;
             case ESP_ERR_NVS_NOT_FOUND:
                 ESP_LOGE("NVS", "Value is not initilized");
-                target = 0;
+                value = 0;
                 break;
             default :
                 ESP_LOGE("NVS", "Errror reading: %s",  esp_err_to_name(err));
         }
         nvs_close(nvs_handle);
+        target = value;
     }
 
     vTaskDelete(NULL);
@@ -271,7 +279,7 @@ void nvs_write(void*_args)    {
     nvs_handle_t nvs_handle = nvs_user_open();
     if(nvs_handle != (nvs_handle_t)NULL)  {
 
-        ESP_LOGI("NVS", "Writing to NVS");
+        ESP_LOGD("NVS", "Writing to NVS");
         err = nvs_set_u8(nvs_handle, "target", target);
         if(err != ESP_OK)   {
             ESP_LOGE("NVS", "Failed writing to NVS: %s", esp_err_to_name(err));
@@ -279,7 +287,7 @@ void nvs_write(void*_args)    {
             ESP_LOGI("NVS", "Done writing to NVS");
         }
 
-        ESP_LOGI("NVS", "Commiting changes");
+        ESP_LOGD("NVS", "Commiting changes");
         err = nvs_commit(nvs_handle);
         if(err != ESP_OK)   {
             ESP_LOGE("NVS", "Failed commiting to NVS: %s", esp_err_to_name(err));
@@ -303,6 +311,9 @@ void on_led_ready() {
     ESP_LOGI(TAG_l, "LED Connection Ready, starting update tasks");
     xTaskCreate(update_state, "Update", 4096, NULL, 3 , &updateTask);
     xTaskCreate(update_supervisor_task, "Update_Shutdown", 4096, NULL, 2 , NULL);
+
+    ESP_LOGI(TAG_i, "Starting IR Task");
+    xTaskCreate(ir_rx_task, "ir_rx_task", 4096, NULL, 10, NULL);
 }
 
 /* ---------------------------------- Main ---------------------------------- */
@@ -329,11 +340,9 @@ void app_main(void) {
     xTaskCreate(nvs_read, "NVS read", 2048, NULL, 2, NULL);
 
     initilize_a();
+    wifi_init();
+
     void (*callback)() = &on_led_ready;
     initilize_l(callback);
 
-    wifi_init();
-
-    ESP_LOGI(TAG_i, "Starting IR Task");
-    xTaskCreate(ir_rx_task, "ir_rx_task", 4096, NULL, 10, NULL);
 }
